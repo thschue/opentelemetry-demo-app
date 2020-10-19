@@ -1,0 +1,18 @@
+apiVersion: skaffold/v1beta13
+kind: Config
+build:
+  artifacts:
+    - image: thschue/otel-node-frontend
+      docker:    # 	beta describes an artifact built from a Dockerfile.
+        dockerfile: frontend/Dockerfile
+        buildArgs:
+          debugBuild: true
+    - image: thschue/otel-node-backend
+      docker:    #      beta describes an artifact built from a Dockerfile.
+        dockerfile: backend/Dockerfile
+        buildArgs:
+          debugBuild: true
+deploy:
+  kubectl:
+    manifests:
+      - deploy/deploy.yaml

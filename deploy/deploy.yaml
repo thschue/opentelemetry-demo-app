@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: node-frontend
+  name: node-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-frontend
+  template:
+    metadata:
+      labels:
+        app: node-frontend
+    spec:
+      containers:
+      - image: thschue/otel-node-frontend
+        name: node-frontend
+        ports:
+        - name: frontend
+          containerPort: 8080
+          protocol: TCP
+        env:
+          - name: PORT
+            value: "8080"
+          - name: JAEGER_HOSTNAME
+            value: "jaeger-demo-agent"
+          - name: JAEGER_PORT
+            value: "6832"
+          - name: BACKEND_HOSTNAME
+            value: "backend-service"
+          - name: BACKEND_PORT
+            value: "8080"
+          - name: EXPORTER
+            value: "jaeger"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: node-backend
+  name: node-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-backend
+  template:
+    metadata:
+      labels:
+        app: node-backend
+    spec:
+      containers:
+      - image: thschue/otel-node-backend
+        name: node-backend
+        ports:
+        - name: backend
+          containerPort: 8080
+          protocol: TCP
+        env:
+          - name: PORT
+            value: "8080"
+          - name: EXPORTER
+            value: "jaeger"
+          - name: JAEGER_HOSTNAME
+            value: "jaeger-demo-agent"
+          - name: JAEGER_PORT
+            value: "6832"
+          - name: MONGO_HOSTNAME
+            value: "mongodb"
+          - name: MONGO_PORT
+            value: "27017"
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        selector: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:latest
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: frontend
+      port: 27017
+      protocol: TCP
+      targetPort: 27017
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: node-frontend
+  name: frontend-service
+spec:
+  ports:
+  - name: frontend 
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: node-frontend
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: node-backend
+  name: backend-service
+spec:
+  ports:
+  - name: frontend
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: node-backend
+  type: ClusterIP
+
